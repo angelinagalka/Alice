@@ -1,0 +1,150 @@
+{
+  "name": "alice",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.0"
+  },
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^4.0.0"
+  }
+}
+import { useState, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
+
+export default function App() {
+  const [articles, setArticles] = useState(() => {
+    const saved = localStorage.getItem("alice_articles");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({
+    title: "",
+    author: "Anggi",
+    content: "",
+    image: null,
+  });
+
+  useEffect(() => {
+    localStorage.setItem("alice_articles", JSON.stringify(articles));
+  }, [articles]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () =>
+        setForm((f) => ({ ...f, image: reader.result }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!form.title.trim() || !form.content.trim()) return;
+    const newArticle = {
+      ...form,
+      id: editingId || uuidv4(),
+      date: new Date().toLocaleString(),
+    };
+    setArticles((prev) => {
+      const filtered = prev.filter((a) => a.id !== newArticle.id);
+      return [newArticle, ...filtered];
+    });
+    setForm({ title: "", author: "Anggi", content: "", image: null });
+    setEditingId(null);
+  };
+
+  const startEdit = (id) => {
+    const art = articles.find((a) => a.id === id);
+    if (art) {
+      setForm(art);
+      setEditingId(id);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 700, margin: "auto", padding: 20 }}>
+      <h1>Alice</h1>
+      <div style={{ marginBottom: 20 }}>
+        <input
+          type="text"
+          placeholder="Заголовок"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          style={{ width: "100%", padding: 8, marginBottom: 8 }}
+        />
+        <input
+          type="text"
+          placeholder="Автор"
+          value={form.author}
+          onChange={(e) => setForm({ ...form, author: e.target.value })}
+          style={{ width: "100%", padding: 8, marginBottom: 8 }}
+        />
+        <textarea
+          rows={6}
+          placeholder="Контент..."
+          value={form.content}
+          onChange={(e) => setForm({ ...form, content: e.target.value })}
+          style={{ width: "100%", padding: 8, marginBottom: 8 }}
+        />
+        <input type="file" accept="image/*" onChange={handleImageChange} />
+        <button
+          onClick={handleSubmit}
+          style={{
+            marginTop: 10,
+            padding: "10px 20px",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          {editingId ? "Зберегти зміни" : "Створити статтю"}
+        </button>
+      </div>
+
+      <div>
+        {articles.map((a) => (
+          <article
+            key={a.id}
+            style={{
+              border: "1px solid #ccc",
+              padding: 15,
+              marginBottom: 20,
+              borderRadius: 5,
+            }}
+          >
+            <h2>{a.title}</h2>
+            <p style={{ fontStyle: "italic", color: "#666" }}>
+              Автор: {a.author} | {a.date}
+            </p>
+            {a.image && (
+              <img
+                src={a.image}
+                alt=""
+                style={{ maxWidth: "100%", borderRadius: 5 }}
+              />
+            )}
+            <p style={{ whiteSpace: "pre-wrap" }}>{a.content}</p>
+            <button
+              onClick={() => startEdit(a.id)}
+              style={{
+                marginTop: 10,
+                padding: "6px 12px",
+                cursor: "pointer",
+              }}
+            >
+              Редагувати
+            </button>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
